@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>文本摘要</title>
+    <link rel="stylesheet" href="/static/index/iconfonts/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="/static/index/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="/static/index/css/style.css">
+</head>
+<body>
+<div class="container-scroller">
+    <nav class="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+        <div class="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
+            <a class="navbar-brand brand-logo" href="#"><img src="/static/index/images/Git.svg" alt="logo"/></a>
+        </div>
+        <div class="navbar-menu-wrapper d-flex align-items-stretch">
+            <ul class="navbar-nav navbar-nav-right">
+                <li class="nav-item nav-profile dropdown">
+                    <a class="nav-link dropdown-toggle" id="profileDropdown" href="#" data-toggle="dropdown"
+                       aria-expanded="false">
+                        <div class="nav-profile-img">
+                            <img src="/static/index/images/face1.png" alt="image">
+                            <span class="availability-status online"></span>
+                        </div>
+                        <div class="nav-profile-text">
+                            <p class="mb-1 text-black">黄明</p>
+                        </div>
+                    </a>
+                    <div class="dropdown-menu navbar-dropdown" aria-labelledby="profileDropdown">
+                        <a class="dropdown-item" href="/logout">
+                            <i class="mdi mdi-logout mr-2 text-primary"></i>
+                            Signout
+                        </a>
+                    </div>
+                </li>
+            </ul>
+            <button class="navbar-toggler navbar-toggler-right d-lg-none align-self-center" type="button"
+                    data-toggle="offcanvas">
+                <span class="mdi mdi-menu"></span>
+            </button>
+        </div>
+    </nav>
+    <div class="container-fluid page-body-wrapper">
+        <nav class="sidebar sidebar-offcanvas" id="sidebar">
+            <ul class="nav">
+                <li class="nav-item nav-profile">
+                    <a href="#" class="nav-link">
+                        <div class="nav-profile-image">
+                            <img src="/static/index/images/face1.png" alt="profile">
+                            <span class="login-status online"></span> <!--change to offline or busy as needed-->
+                        </div>
+                        <div class="nav-profile-text d-flex flex-column">
+                            <span class="font-weight-bold mb-2">黄明</span>
+                            <span class="text-secondary text-small">无名之辈</span>
+                        </div>
+                        <i class="mdi mdi-bookmark-check text-success nav-profile-badge"></i>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#"><img src="/static/index/images/QQ.svg" alt="logo" style="width: 22px;height: 22px;margin-left: 12px"></a>
+                    <a href="#"><img src="/static/index/images/weixin.svg" alt="logo" style="width: 22px;height: 22px;margin-left: 12px"></a>
+                    <a href="#"><img src="/static/index/images/weibo.svg" alt="logo" style="width: 22px;height: 22px;margin-left: 12px"></a>
+                    <a href="#"><img src="/static/index/images/github.svg" alt="logo" style="width: 22px;height: 22px;margin-left: 12px"></a>
+                    <a href="#"><img src="/static/index/images/douyin.svg" alt="logo" style="width: 22px;height: 22px;margin-left: 12px"></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/index">
+                        <span class="menu-title">文本摘要</span>
+                        <i class="mdi mdi-home menu-icon"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+            <h3 class="page-header">自动获取文本摘要</h3>
+            <div class="form-horizontal" style="margin-left: 10px">
+                <div class="form-group">
+                    <label for="inputEmail3" class="control-label" style="margin-bottom:15px;font-weight:800;font-size: 16px">标题</label>
+                    <div>
+                        <input id="title-txt" class="form-control" style="width: 1150px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="inputEmail3" class="control-label" style="margin-bottom:15px;font-weight:800;font-size: 16px">文本</label>
+                    <div>
+                        <textarea id="news-txt" class="form-control" rows="12" style="width: 1150px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <button id="sub1" class="btn btn-info btn-sm" style="margin-bottom: 25px">生成</button>
+                    </div>
+                </div>
+            </div>
+            <div class="form-horizontal" style="margin-left: 10px">
+                <div class="form-group">
+                    <label for="inputEmail3" class="control-label" style="margin-bottom:15px;font-weight:800;font-size: 16px">结果</label>
+                    <div>
+                        <textarea readonly="readonly" id="sum-txt" class="form-control" rows="12" style="width: 1150px;"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade bs-example-modal-sm" id="Loading" tabindex="-1" role="dialog" aria-labelledby="mySmallModalLabel">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content" style="color: red;text-align: center">
+            抽取中，客官请稍等！
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/index/js/vendor.bundle.base.js"></script>
+<script src="/static/index/js/vendor.bundle.addons.js"></script>
+<script src="/static/index/js/off-canvas.js"></script>
+<script src="/static/index/js/misc.js"></script>
+<script src="/static/index/js/dashboard.js"></script>
+<script src="/static/js/jquery-3.3.1.js"></script>
+<script src="/static/js/bootstrap.js"></script>
+<script>
+        // 页面加载完毕后执行
+        $(function () {
+            bindSubmit1();  //输入框提交
+            bindSubmit2();  //文件形式提交
+        });
+
+        //绑定提交(textarea方式)
+        function bindSubmit1() {
+            $('#sub1').click(function () {
+                var t = $("#title-txt").val();
+                var v = $('#news-txt').val();
+                $('#Loading').modal('show'); //显示加载框
+                $.ajax({
+                    url: "/submit_news",
+                    type: 'POST',
+                    async: true,
+                    dataType: "JSON",
+                    data: {'title':t, 'news': v},
+                    traditional: true,
+                    success: function (arg) {
+                        //arg是字符串
+                        //JSON.parse将字符串转换成字典，相当于json.loads
+                        // 这里arg居然是对象。。。浪费时间
+                        //var dict = JSON.parse(arg);
+                        if (arg.status) {
+                            $('#tb').empty(); //清除前面的显示结果
+                            $('#Loading').modal('hide'); //隐藏加载框
+                            // console.log(arg.news);
+                            var exNews = arg.summary;
+                            {#window.location.reload();#}
+                            $("#sum-txt").val(exNews)
+
+                        }
+                    }
+                })
+            })
+        }
+    </script>
+
+</body>
+
+</html>
