@@ -1,15 +1,14 @@
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import defaultdict
-from bin.get_data import getWordmap, getWeight, getWordWeight, sentences2idx, seq2weight
-from bin.get_file import split_sentence, cut, token, get_stopwords
-from bin.SIF_embedding import SIF_embedding
+from utils.data import getWordmap, getWeight, getWordWeight, sentences2idx, seq2weight, get_stopwords
+from utils.utils import split_sentence, cut
+from utils.SIF_embedding import SIF_embedding
+from utils.LDA import get_scores_by_lda
 import numpy as np
-import pandas as pd
 from jieba import analyse  # TextRank
-from gensim import corpora, models  # LDA
 import networkx
 import logging
-import re
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -26,15 +25,19 @@ class AutoSummary:
         self.w_title = 1
         self.w_keyword = 1
 
-
         self.word_file = 'word_vec_file.txt'
         self.weight_file = 'weight_file.txt'
+        self.stopwords_file = 'chinese_stopwords.txt'
+        self.corpus_file = 'news.txt'
+        self.model_file = 'news.model'
+
         self.a = a # SIF param
         self.words, self.vectors = getWordmap(self.word_file)
         self.word2weight = getWordWeight(self.weight_file, self.a)
         self.weight4ind = getWeight(self.words, self.word2weight)
+        self.stopwords = get_stopwords(self.stopwords_file)
 
-    def _pre_processing(self, text, use_sif=True):
+    def _pre_processing_text(self, text, use_sif=True):
         """
         split text to sentences, use SIF weighted or average word embedding to get sentence embedding
         :param text:
@@ -44,6 +47,7 @@ class AutoSummary:
         embedding: np.array, sentence embedding
         """
         sentences = split_sentence(text)
+
         sentences_cut = [' '.join(word for word in cut(sentence)) for sentence in sentences]
         x, m = sentences2idx(sentences_cut, self.words)
         if use_sif:
@@ -61,7 +65,34 @@ class AutoSummary:
                 embedding[i, :] = tmp / count # 平均句子向量
         return sentences, embedding
 
-    def get_summary(self, text, title, constraint=200, algorithm='TextRank', use_sif=True):
+    def _pre_processing_title(self, title, use_sif=True):
+        """
+        title embedding, use SIF weighted or average word embedding to get sentence embedding
+        :param text:
+        :param use_sif:
+        :return:
+        sentences: List[str], cut from text
+        embedding: np.array, sentence embedding
+        """
+
+        title_cut = [' '.join(word for word in cut(title) if word not in self.stopwords)]
+        x, m = sentences2idx(title_cut, self.words)
+        if use_sif:
+            w = seq2weight(x, m, self.weight4ind)
+            embedding = SIF_embedding(self.vectors, x, w, 1)
+        else:
+            embedding = np.zeros((len(title_cut), 100))
+            for i in range(embedding.shape[0]):
+                tmp = np.zeros((1, 100))
+                count = 0
+                for j in range(x.shape[1]):
+                    if m[i, j] > 0 and x[i, j] >= 0:
+                        tmp += self.vectors[x[i, j]]
+                        count += 1
+                embedding[i, :] = tmp / count # 平均句子向量
+        return embedding
+
+    def get_summary(self, text, title, constraint=200, algorithm='TextRank', use_sif=False):
         """
         Use TextRank or Cosine Similarity to summary
         :param text: extract summary for the text
@@ -74,6 +105,8 @@ class AutoSummary:
             scores, sentences = self._text_rank(text, use_sif)
         elif algorithm == "Cosine":
             scores, sentences = self._summary_by_similarity(text, title, use_sif)
+        elif algorithm == 'LDA':
+            scores, sentences = self._summary_by_lda(text, title)
         else:
             raise ValueError('only support TextRank and Cosine Similarity!')
 
@@ -94,36 +127,64 @@ class AutoSummary:
                 summarized.append(sen)
         return ''.join(summarized)
 
+    def _summary_by_lda(self, text, title):
+        """
+        Use LDA to calculate the similarity between each sentence and the text
+        :param text:
+        :param title:
+        :return:
+        """
+        scores, sentences = get_scores_by_lda(text, title, self.corpus_file, self.stopwords_file, self.model_file)
+        scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        return scores, sentences
+
     def _text_rank(self, text, use_sif):
         """
-        Use TextRank to get scores of scores
+        Use TextRank to calculate the similarity between each sentence and each sentence
         :param text:
         :param use_sif:
         :return:
         scores: dict, key is index of sentence, value is score used in rank
         sentences: list, a list of sentences
         """
-        sentences, sentences_embedding = self._pre_processing(text, use_sif)
-        sentences_length = sentences_embedding.shape[0]
-        graph = np.zeros((sentences_length, sentences_length))
+        sentences, sentences_embedding = self._pre_processing_text(text, use_sif)
 
-        for i in range(sentences_length):
-            for j in range(i +1, sentences_length):
-                graph[i, j] = cosine_similarity(sentences_embedding[i, None], sentences_embedding[j, None])
-                graph[j, i] = graph[i, j]
-
-        nx_graph = networkx.from_numpy_matrix(graph)
+        nx_graph = self._get_graph_from_Emcosine(sentences_embedding)
 
         scores = self._page_rank(nx_graph)
         return scores, sentences
+
+    def _get_graph_from_Emcosine(self, sentences_embedding):
+        """
+        关联句子Embedding cosine相似度，获得graph
+        :param sentences:
+        :param sentences_embedding:
+        :return: dict
+        """
+        sentences_length = sentences_embedding.shape[0]
+        graph = np.zeros((sentences_length, sentences_length))
+        for i in range(sentences_length):
+            for j in range(i +1, sentences_length):
+                # print("cosine", cosine_similarity(sentences_embedding[i, None].reshape(1, -1),
+                #                                   sentences_embedding[j, None].reshape(1, -1))
+                graph[i, j] = cosine_similarity(sentences_embedding[i, None].reshape(1, -1),
+                                                sentences_embedding[j, None].reshape(1, -1))
+                graph[j, i] = graph[i, j]
+        nx_graph = networkx.from_numpy_matrix(graph)
+
+        # print("nodes number", nx_graph.number_of_nodes())
+        # print("nodes", nx_graph.nodes())
+        # print("edges", nx_graph.edges())
+        return nx_graph
 
     def _page_rank(self, graph):
         """
         Page_Rank
         :param split_sentence:
         :return:
+        {sentence_idx: pagerank}
         """
-        ranking_sentences = networkx.pagerank(graph, max_iter=500)
+        ranking_sentences = networkx.pagerank(graph, alpha=0.9, max_iter=300)
         ranking_sentences = sorted(ranking_sentences.items(), key=lambda x: x[1], reverse=True)
         return ranking_sentences
 
@@ -136,22 +197,28 @@ class AutoSummary:
         scores: dict, key is index of sentence, value is score used in rank
         sentences: list, a list of sentences
         """
-        sentences, sentences_embedding = self._pre_processing(text, use_sif)
-        title, title_embedding = self._pre_processing(title, use_sif=False)
+        sentences, sentences_embedding = self._pre_processing_text(text, use_sif)
+        title_embedding = self._pre_processing_title(title, use_sif)
 
-        text_embedding = sentences_embedding.mean(axis=0, keepdims=True) # 平均
-        title_embedding = title_embedding.mean(axis=0, keepdims=True)
+
+        text_embedding = sentences_embedding.mean(axis=0, keepdims=True)  # 平均
+        # # 增加标题权重
+        # text_embedding += title_embedding * 0.5
+        # # 增加第一句话权重
+        # text_embedding += sentences_embedding[0,:] * 0.5
 
         scores = {}
 
         key_word = self._keyword(text) # 关键字
         for i, sub_sentence in enumerate(sentences):
             if key_word in sub_sentence:
-                w_keyword = self.w_keyword * 1.5
+                w_keyword = self.w_keyword * 1.2
             else:
                 w_keyword = self.w_keyword
-            sim_text = cosine_similarity(sentences_embedding[i].reshape(1, -1), text_embedding)
-            sim_title = cosine_similarity(sentences_embedding[i].reshape(1, -1), title_embedding)
+
+            sim_text = cosine_similarity(sentences_embedding[i].reshape(1, -1), text_embedding)[0, 0]
+            sim_title = cosine_similarity(sentences_embedding[i].reshape(1, -1), title_embedding)[0, 0]
+
             total_sim = sim_text + self.w_title * sim_title
             scores[i] = total_sim * w_keyword
 
@@ -181,20 +248,6 @@ class AutoSummary:
         keywords = text_rank(text)
         return keywords[0]
 
-    # def _topic(self):
-    #     word_list = get_words_list(self.text, self.stopwords)
-    #     word_dict = corpora.Dictionary(word_list)  # 生成文档的词典，每个词与一个整型索引值对应
-    #     corpus_list = [word_dict.doc2bow(text) for text in word_list]  # 词频统计，转化成空间向量格式
-    #     lda = models.ldamodel.LdaModel(corpus=corpus_list,
-    #                                    id2word=word_dict,
-    #                                    num_topics=5,
-    #                                    passes=20,
-    #                                    alpha='auto')
-    #     for pattern in lda.show_topics():
-    #         print(pattern)
-    #
-    #     lda.get_document_topics(corpus_list[0])
-    #     lda.show_topic(1, topn=20)
 
 if __name__ == "__main__":
     text_1 = """虽然至今夏普智能手机在市场上无法排得上号，已经完全没落，并于 2013 年退出中国市场，
@@ -231,8 +284,26 @@ if __name__ == "__main__":
     成为他们第五张登顶ilboard排行榜的专辑。而昨晚刚刚发布新单《 Talking To Myself》MV
     """
 
-    title_2 = "肯公园主唱查斯特·贝宁顿今早自缢身亡"
+    title_2 = "林肯公园主唱查斯特·贝宁顿 Chester Bennington自杀"
 
-    summary_1 = AutoSummary()
-    result_1 = summary_1.get_summary(text_2, title_2, constraint=200, algorithm='Cosine', use_sif=True)
-    print(result_1)
+    summary = AutoSummary()
+
+    # TextRank + Average
+    result_1 = summary.get_summary(text_2, title_2, constraint=200, algorithm='TextRank', use_sif=False)
+    print("\n",result_1)
+    # TextRank + SIF  ------ 收敛不了
+    # result_2 = summary.get_summary(text_2, title_2, constraint=200, algorithm='TextRank', use_sif=True)
+    # print("\n",result_2)
+
+    #Cosine_similarity + SIF
+    result_3 = summary.get_summary(text_2, title_2, constraint=200, algorithm='Cosine', use_sif=True)
+    print("\n",result_3)
+
+    # Cosine_similarity + Average
+    result_4 = summary.get_summary(text_2, title_2, constraint=200, algorithm='Cosine', use_sif=False)
+    print("\n", result_4)
+
+    # LDA
+    result_5 = summary.get_summary(text_2, title_2, constraint=200, algorithm='LDA', use_sif=False)
+    print("\n", result_5)
+

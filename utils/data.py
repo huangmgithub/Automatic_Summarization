@@ -4,6 +4,16 @@ import os
 # reference: https://github.com/PrincetonML/SIF
 BASE_DATA_DIR = './data/'
 
+def get_stopwords(stopwords_filename):
+    """
+    停用词
+    :param filename:
+    :return:
+    """
+    filename = os.path.join(BASE_DATA_DIR, stopwords_filename)
+    with open(filename, 'r', encoding='utf-8') as f:
+        return set([line.strip() for line in f])
+
 def getWordmap(text_filename):
     """
     获得词embedding table and 词表

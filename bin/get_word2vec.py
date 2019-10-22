@@ -9,7 +9,13 @@ BASE_MODEL_DIR = '../model/word2vec/'
 BASE_DATA_DIR = '../data/'
 
 def word2vec_train(train_file, save_model_file, save_vector_file):
-    """词向量训练"""
+    """
+    词向量训练
+    :param train_file:
+    :param save_model_file:
+    :param save_vector_file:
+    :return:
+    """
     f_wiki = open(train_file, "r", encoding="utf-8")
     sentences = LineSentence(f_wiki)
     model = Word2Vec(sentences, size = 100, window = 5, min_count = 7, workers = multiprocessing.cpu_count())
@@ -17,7 +23,11 @@ def word2vec_train(train_file, save_model_file, save_vector_file):
     model.wv.save_word2vec_format(save_vector_file, binary = False)
 
 def load_model(fname):
-    """加载模型"""
+    """
+    加载模型
+    :param fname:
+    :return:
+    """
     return Word2Vec.load(fname)
 
 if __name__ == "__main__":
