@@ -1,28 +1,26 @@
 import numpy as np
 import os
-
+from setting import word2vec_file, weight_file, stopwords_file
 # reference: https://github.com/PrincetonML/SIF
-BASE_DATA_DIR = './data/'
 
-def get_stopwords(stopwords_filename):
+
+def get_stopwords():
     """
     停用词
     :param filename:
     :return:
     """
-    filename = os.path.join(BASE_DATA_DIR, stopwords_filename)
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(stopwords_file, 'r', encoding='utf-8') as f:
         return set([line.strip() for line in f])
 
-def getWordmap(text_filename):
+def getWordmap():
     """
     获得词embedding table and 词表
     :param textfilename:
     :return: words , We
     """
     words = {}
-    filename = os.path.join(BASE_DATA_DIR, text_filename)
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(word2vec_file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     We = np.zeros((len(lines), 100))
     for i, line in enumerate(lines):
@@ -35,8 +33,8 @@ def getWordmap(text_filename):
 def prepare_data(list_of_seqs):
     """
     获得句子中每个词的索引，max_len（0表示没有）构成词索引矩阵
-    :param list_of_seqs:
-    :return:
+    :param list_of_seqs: 一系列句子索引 [[idx,idx,..], [], [],...]
+    :return: pad 句子长度统一
     """
     lengths = [len(s) for s in list_of_seqs]
     n_samples = len(list_of_seqs)
@@ -106,7 +104,7 @@ def sentences2idx(sentences, words):
     return x1, m1
 
 
-def getWordWeight(weight_file, a=1e-3):
+def getWordWeight(a=1e-3):
     """
     获得单词权重(SIF)
     :param weight_file: 词频文件
@@ -114,8 +112,8 @@ def getWordWeight(weight_file, a=1e-3):
     :return: 权重（字典{word：weight}）
     """
     word2weight = {}
-    filename = os.path.join(BASE_DATA_DIR, weight_file)
-    with open(filename, encoding='utf-8') as f:
+
+    with open(weight_file, encoding='utf-8') as f:
         lines = f.readlines()
     for i in lines:
         i = i.strip()
@@ -125,6 +123,7 @@ def getWordWeight(weight_file, a=1e-3):
                 word2weight[i[0]] = a / (a + float(i[1]))
             else:
                 print(i)
+
     return word2weight
 
 def getWeight(words, word2weight):
@@ -160,6 +159,4 @@ def seq2weight(seq, mask, weight4ind):
     return weight
 
 if __name__ == "__main__":
-    word_file = 'word_vec_file.txt'
-    words, vectors = getWordmap(word_file)
-
+    words, vectors = getWordmap()

@@ -1,5 +1,6 @@
 import jieba
 import re, os
+from setting import stopwords_file
 
 
 def cut(string):
@@ -18,13 +19,13 @@ def token(string):
     """
     return re.findall(r'[\d\w]+', string)
 
-def get_stopwords(filename):
+def get_stopwords():
     """
     停用词
     :param filename:
     :return:
     """
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(stopwords_file, 'r', encoding='utf-8') as f:
         return set([line.strip() for line in f])
 
 
@@ -35,10 +36,13 @@ def split_sentence(text):
     :return:
     """
     text = re.sub(r'\s+', '', text)
-    # pattern = re.compile('[。，,.:：]')
-    pattern = re.compile('[。?!！？.]')
-    sentence_segments = pattern.sub(' ', text).split()
-    return sentence_segments
+    pattern = re.compile('[。，,.?？!！""”]')
+    pattern1 = re.compile('\w+?([。，,.?？!！""”])')
+    flags = pattern1.findall(text) # 字和标点混合
+    sentences = pattern.sub("***", text).split("***")
+    sentences = [sen for sen in sentences if sen != ""]
+
+    return sentences, flags
 
 # def split_sentence(text):
 #     """分割文本"""

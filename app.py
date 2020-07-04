@@ -1,7 +1,7 @@
 from flask import Flask, url_for, render_template, redirect, session, Response, jsonify #将内容转换为json
 from flask.views import request
 import os, json
-from main import AutoSummary
+from Word2vec import AutoSummary
 
 app = Flask(__name__)
 

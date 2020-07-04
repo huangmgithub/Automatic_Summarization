@@ -16,14 +16,14 @@ def get_weighted_average(We, x, w):
         emb[i,:] = w[i,:].dot(We[x[i,:],:]) / np.count_nonzero(w[i,:])
     return emb
 
-def compute_pc(X,npc=1):
+def compute_pc(X, npc=1):
     """
     Compute the principal components. DO NOT MAKE THE DATA ZERO MEAN!
     :param X: X[i,:] is a data point
     :param npc: number of principal components to remove
     :return: component_[i,:] is the i-th pc
     """
-    svd = TruncatedSVD(n_components=npc, n_iter=7, random_state=0)
+    svd = TruncatedSVD(n_components=npc, n_iter=5, random_state=0)
     svd.fit(X)
     return svd.components_
 
